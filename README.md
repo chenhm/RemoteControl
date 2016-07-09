@@ -1,1 +1,0 @@
-This is a HTML5 Video demo

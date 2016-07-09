@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="videotracker.js"></script>
+</head>
+</html>
+<body>
+<video id="video_id" width="640" height="480" autoplay="auto">
+</video>
+<script lang="javascrip">
+    var videoObj = {'video': true}
+    var errBack = function (error) {
+        console.log('Video capture error: ', error.code)
+    }
+    if (navigator.webkitGetUserMedia) { // WebKit-prefixed
+        navigator.webkitGetUserMedia(videoObj, callback, errBack)
+    } else if (navigator.mozGetUserMedia) { // Firefox-prefixed
+        navigator.mozGetUserMedia(videoObj, callback, errBack)
+    }
+
+    function callback(stream) {
+        var video = document.getElementById('video_id')
+        video.src = window.URL.createObjectURL(stream)
+        video.play()
+    }
+    onMoveFunc = function (x, y) {
+        console.log('Object detected at x=' + x + ', y=' + y);
+    };
+    var videotracker = new VideoTracker({video_target_id: 'video_id'});
+    videotracker.setOnMoveFunc(onMoveFunc);
+    videotracker.start();
+</script>
+</body>
