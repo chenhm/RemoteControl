@@ -55,7 +55,7 @@
     function createFrame() {
         ctx.drawImage(video2track, 0, 0, video_width, video_height);
         computeFrame();
-        setTimeout(createFrame, 1 );
+        setTimeout(createFrame, 5);
     };
 
     function dist(x1, y1, x2, y2) {
@@ -120,7 +120,13 @@
     }
 
     function computeFrame() {
-        frame = ctx.getImageData(0, 0, video_width, video_height);
+        try{
+          frame = ctx.getImageData(0, 0, video_width, video_height);
+        }catch(e){
+          console.log(e)
+          return
+        }
+
         blend();
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
@@ -148,29 +154,40 @@
                 }
             }
         }
-        if (shapes.length>0)
+        if (shapes.length == 1)
         {
+          if(last_x != 0 && last_y != 0){
+            if(Math.abs(shapes[0].x - last_x) > tracker_size || Math.abs(shapes[0].y - last_y) > tracker_size){
+              return
+            }
+          }
             ctx.beginPath();
             ctx.moveTo(shapes[0].x, shapes[0].y);
             for( var s=0; s<shapes.length; s+=1){
                 ctx.strokeRect(shapes[s].x-tracker_size/2,  shapes[s].y-tracker_size/2, tracker_size, tracker_size);
-                //ctx.lineTo(shapes[s].x, shapes[s].y);
+                // ctx.lineTo(shapes[s].x, shapes[s].y);
             }
             ctx.closePath();
             ctx.stroke();
             if (shapes.length==1){
-                onMoveFunc(shapes[0].x, shapes[0].y);
+              onMoveFunc(shapes[0].x, shapes[0].y);
             }
         }
     }
+
+    var last_x = 0, last_y = 0;
 
     function blend() {
         if (!lastImageData) lastImageData = frame;
         var blendedData = ctx.createImageData(video_width, video_height);
         createBlendedMask(blendedData.data, frame.data, lastImageData.data);
         ctxBlended.putImageData(blendedData, 0, 0);
-        frameBlended = ctxBlended.getImageData(0, 0, video_width, video_height);
-        lastImageData = frame;
+        try{
+          frameBlended = ctxBlended.getImageData(0, 0, video_width, video_height);
+          lastImageData = frame;
+        }catch(e){
+          console.log(e);
+        }
     }
 
     function fastAbs(value) {
@@ -205,7 +222,7 @@
         min_speed: 0x45,               // Minimun speed of the object to trigger the onMove function
         tracker_size: 40,              // Size of the tracker
         color_to_track: '#EFD0CF',     // Caucasian skin color by defect
-        color_tolerance: [1, 1, 1],  // h,s,v vector color tolerance (range 0-1)
+        color_tolerance: [0.2, 0.2, 0.2],  // h,s,v vector color tolerance (range 0-1)
         blended_opacity:0,
         tracker_opacity:1,
         zIndex: 2e9,                   // Use a high z-index by default

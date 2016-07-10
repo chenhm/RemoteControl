@@ -1,12 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Hackthon</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <script src="videotracker.js"></script>
+    <style>
+    .inverted{
+      transform: rotateY(180deg);
+      -webkit-transform:rotateY(180deg); /* Safari and Chrome */
+      -moz-transform:rotateY(180deg); /* Firefox */
+    }
+    </style>
 </head>
 </html>
 <body>
 <video id="video_id" width="640" height="480" autoplay="auto">
 </video>
+<audio src="b0.ogg" id="b0"></audio>
+<audio src="b1.ogg" id="b1"></audio>
+<audio src="b2.ogg" id="b2"></audio>
+<audio src="b3.ogg" id="b3"></audio>
+<audio src="b4.ogg" id="b4"></audio>
+<audio src="b5.ogg" id="b5"></audio>
+<audio src="b6.ogg" id="b6"></audio>
+<audio src="b7.ogg" id="b7"></audio>
 <script lang="javascrip">
     var videoObj = {'video': true}
     var errBack = function (error) {
@@ -23,10 +40,17 @@
         video.src = window.URL.createObjectURL(stream)
         video.play()
     }
+    var playid;
     onMoveFunc = function (x, y) {
         console.log('Object detected at x=' + x + ', y=' + y);
+        if(y > 200) return
+        var id = "#b" + Math.floor(x/80);
+        if(id == playid) return
+        playid = id
+        var play = document.querySelector(id);
+        if(play) play.play()
     };
-    var videotracker = new VideoTracker({video_target_id: 'video_id'});
+    var videotracker = new VideoTracker({video_target_id: 'video_id', inverted:true});
     videotracker.setOnMoveFunc(onMoveFunc);
     videotracker.start();
 </script>
