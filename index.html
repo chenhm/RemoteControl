@@ -3,6 +3,7 @@
 <head>
     <title>Hackthon</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script src="dollar.js"></script>
     <script src="videotracker.js"></script>
     <style>
     .inverted{
@@ -24,34 +25,4 @@
 <audio src="b5.ogg" id="b5"></audio>
 <audio src="b6.ogg" id="b6"></audio>
 <audio src="b7.ogg" id="b7"></audio>
-<script lang="javascrip">
-    var videoObj = {'video': true}
-    var errBack = function (error) {
-        console.log('Video capture error: ', error.code)
-    }
-    if (navigator.webkitGetUserMedia) { // WebKit-prefixed
-        navigator.webkitGetUserMedia(videoObj, callback, errBack)
-    } else if (navigator.mozGetUserMedia) { // Firefox-prefixed
-        navigator.mozGetUserMedia(videoObj, callback, errBack)
-    }
-
-    function callback(stream) {
-        var video = document.getElementById('video_id')
-        video.src = window.URL.createObjectURL(stream)
-        video.play()
-    }
-    var playid;
-    onMoveFunc = function (x, y) {
-        console.log('Object detected at x=' + x + ', y=' + y);
-        if(y > 200) return
-        var id = "#b" + Math.floor(x/80);
-        if(id == playid) return
-        playid = id
-        var play = document.querySelector(id);
-        if(play) play.play()
-    };
-    var videotracker = new VideoTracker({video_target_id: 'video_id', inverted:true});
-    videotracker.setOnMoveFunc(onMoveFunc);
-    videotracker.start();
-</script>
 </body>

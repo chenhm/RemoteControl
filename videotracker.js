@@ -55,7 +55,7 @@
     function createFrame() {
         ctx.drawImage(video2track, 0, 0, video_width, video_height);
         computeFrame();
-        setTimeout(createFrame, 5);
+        setTimeout(createFrame, 1);
     };
 
     function dist(x1, y1, x2, y2) {
@@ -89,9 +89,9 @@
         }else{
             switch(max){
                 case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r) / d + 2; break;
-                        case b: h = (r - g) / d + 4; break;
-                            }
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
             h /= 6;
         }
 
@@ -104,7 +104,7 @@
         vcolor = hsv[2];
     }
 
-    function is_object_color(pos){
+    function is_object_color(pos, frame, frameBlended){
         frameData = frame.data;
         frameBlendedData = frameBlended.data;
         if( (frameBlendedData[pos+0]+frameBlendedData[pos+1]+frameBlendedData[pos+2])/3 < 255 )
@@ -119,18 +119,14 @@
         return true;
     }
 
+    var _points = new Array();
+    var _r = new DollarRecognizer();
     function computeFrame() {
-        try{
-          frame = ctx.getImageData(0, 0, video_width, video_height);
-        }catch(e){
-          console.log(e)
-          return
-        }
-
-        blend();
+        var frame = ctx.getImageData(0, 0, video_width, video_height);
+        var frameBlended = blend(frame);
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
-        ctx.clearRect (0, 0, video_width, video_height);
+        // ctx.clearRect (0, 0, video_width, video_height);
         var object_shape = null;
         var shapes = [];
         var x, y;
@@ -142,7 +138,7 @@
             pos = i*4;
             x = i % frame.width;
             y = Math.round(i / frame.width);
-            if(is_object_color(pos))
+            if(is_object_color(pos, frame, frameBlended))
             {
                 //console.log("object found!");
                 if (!object_shape) {
@@ -150,21 +146,38 @@
                     object_shape = {};
                     object_shape.x = x;
                     object_shape.y = y;
+
+                    if(Math.abs(x - last_x) > tracker_size || Math.abs(y - last_y) > tracker_size){
+                      // console.log(new Date().getTime() - last_time)
+                      if(new Date().getTime() - last_time < 150){
+                        // console.log("distance > tracker_size");
+                        return
+                      }
+                    }
+
                     shapes.push(object_shape);
+                    path.push(object_shape);
+                    _points.push(new Point(x, y));
                 }
             }
         }
         if (shapes.length == 1)
         {
-          if(last_x != 0 && last_y != 0){
-            if(Math.abs(shapes[0].x - last_x) > tracker_size || Math.abs(shapes[0].y - last_y) > tracker_size){
-              return
-            }
-          }
+            last_x = shapes[0].x;
+            last_y = shapes[0].y;
+            last_time = new Date().getTime();
+            // console.log(shapes[0].x, shapes[0].y);
+            var colorTracked = ctx.getImageData(shapes[0].x, shapes[0].y, 1, 1).data;
+            // console.log(colorTracked);
+            // console.log("color: r="+colorTracked[0]+",g="+colorTracked[1]+",b="+colorTracked[2]);
+            var hsv = rgbToHsv(colorTracked);
+            // console.log(colorTracked);
+            setColorToTrack(hsv);
             ctx.beginPath();
-            ctx.moveTo(shapes[0].x, shapes[0].y);
-            for( var s=0; s<shapes.length; s+=1){
-                ctx.strokeRect(shapes[s].x-tracker_size/2,  shapes[s].y-tracker_size/2, tracker_size, tracker_size);
+            // ctx.moveTo(path[0].x, path[0].y);
+            for( var s=0; s<path.length; s+=1){
+                // ctx.strokeRect(path[s].x-tracker_size/2,  path[s].y-tracker_size/2, tracker_size, tracker_size);
+                ctx.arc(path[s].x, path[s].y, tracker_size/2, 0 , 2*Math.PI);
                 // ctx.lineTo(shapes[s].x, shapes[s].y);
             }
             ctx.closePath();
@@ -172,22 +185,27 @@
             if (shapes.length==1){
               onMoveFunc(shapes[0].x, shapes[0].y);
             }
+        }else{
+          path = []
+          if(_points.length > 10){
+            var result = _r.Recognize(_points)
+            console.log(result);
+            _points = [];
+          }          
         }
     }
 
-    var last_x = 0, last_y = 0;
+    var path = [];
+    var last_x = 0, last_y = 0, last_time = 0;
 
-    function blend() {
+    function blend(frame) {
         if (!lastImageData) lastImageData = frame;
         var blendedData = ctx.createImageData(video_width, video_height);
         createBlendedMask(blendedData.data, frame.data, lastImageData.data);
         ctxBlended.putImageData(blendedData, 0, 0);
-        try{
-          frameBlended = ctxBlended.getImageData(0, 0, video_width, video_height);
-          lastImageData = frame;
-        }catch(e){
-          console.log(e);
-        }
+        var frameBlended = ctxBlended.getImageData(0, 0, video_width, video_height);
+        lastImageData = frame;
+        return frameBlended;
     }
 
     function fastAbs(value) {
@@ -274,7 +292,7 @@
             if(o.interactive) {
                 vtCanvas.addEventListener('click', function(e) {
                     ctx.drawImage(video2track, 0, 0, video_width, video_height);
-                    colorTracked = ctx.getImageData(video_width-e.clientX,e.clientY,1,1).data;
+                    var colorTracked = ctx.getImageData(video_width-e.clientX,e.clientY,1,1).data;
                     hsv = rgbToHsv(colorTracked);
                     console.log("color: r="+colorTracked[0]+",g="+colorTracked[1]+",b="+colorTracked[2]);
                     console.log("color: H="+hsv[0]+",S="+hsv[1]+",V="+hsv[2]);
@@ -295,3 +313,34 @@
     window.VideoTracker = VideoTracker;
 
 })(window, document);
+
+document.addEventListener("DOMContentLoaded", function() {
+  var videoObj = {'video': true}
+  var errBack = function (error) {
+      console.log('Video capture error: ', error.code)
+  }
+  if (navigator.webkitGetUserMedia) { // WebKit-prefixed
+      navigator.webkitGetUserMedia(videoObj, callback, errBack)
+  } else if (navigator.mozGetUserMedia) { // Firefox-prefixed
+      navigator.mozGetUserMedia(videoObj, callback, errBack)
+  }
+
+  function callback(stream) {
+      var video = document.getElementById('video_id')
+      video.src = window.URL.createObjectURL(stream)
+      video.play()
+  }
+  var playid;
+  var onMoveFunc = function (x, y) {
+      // console.log('Object detected at x=' + x + ', y=' + y);
+      if(y > 200) return
+      var id = "#b" + Math.floor(x/80);
+      if(id == playid) return
+      playid = id
+      var play = document.querySelector(id);
+      // if(play) play.play()
+  };
+  var videotracker = new VideoTracker({video_target_id: 'video_id', inverted:true});
+  videotracker.setOnMoveFunc(onMoveFunc);
+  videotracker.start();
+});
