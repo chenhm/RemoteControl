@@ -2,9 +2,9 @@
 (function(window, document, undefined) {
 
     /**
-    * Copyright (c) 2012 Luis Sobrecueva
-    * Licensed under the MIT license
-    */
+     * Copyright (c) 2012 Luis Sobrecueva
+     * Licensed under the MIT license
+     */
 
     // HTML Document functions
     // ------------------------
@@ -55,7 +55,7 @@
     function createFrame() {
         ctx.drawImage(video2track, 0, 0, video_width, video_height);
         computeFrame();
-        setTimeout(createFrame, 1);
+        setTimeout(createFrame, 1 );
     };
 
     function dist(x1, y1, x2, y2) {
@@ -104,29 +104,32 @@
         vcolor = hsv[2];
     }
 
-    function is_object_color(pos, frame, frameBlended){
+    function is_object_color(pos){
         frameData = frame.data;
         frameBlendedData = frameBlended.data;
         if( (frameBlendedData[pos+0]+frameBlendedData[pos+1]+frameBlendedData[pos+2])/3 < 255 )
             return false;
         for (i=pos-4; i<=pos+4; i+=4){
             hsv = rgbToHsv([frameData[pos+0],frameData[pos+1],frameData[pos+2]]);
-            if(hsv[0] < hcolor-color_tolerance[0]/2 || hsv[0] > hcolor+color_tolerance[0]/2 ||
-               hsv[1] < scolor-color_tolerance[1]/2 || hsv[1] > scolor+color_tolerance[1]/2 ||
-               hsv[2] < vcolor-color_tolerance[2]/2 || hsv[2] > vcolor+color_tolerance[2]/2)
+            if(hsv[0] < hcolor-color_tolerance[0]/3 || hsv[0] > hcolor+color_tolerance[0]/3 ||
+                hsv[1] < scolor-color_tolerance[1]/3 || hsv[1] > scolor+color_tolerance[1]/3 ||
+                hsv[2] < vcolor-color_tolerance[2]/3 || hsv[2] > vcolor+color_tolerance[2]/3)
                 return false;
         }
         return true;
     }
+    //connect with mqtt
+    mqttClient.subscribe('',processMessage);
 
     var _points = new Array();
     var _r = new DollarRecognizer();
+
     function computeFrame() {
-        var frame = ctx.getImageData(0, 0, video_width, video_height);
-        var frameBlended = blend(frame);
+        frame = ctx.getImageData(0, 0, video_width, video_height);
+        blend();
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
-        // ctx.clearRect (0, 0, video_width, video_height);
+        ctx.clearRect (0, 0, video_width, video_height);
         var object_shape = null;
         var shapes = [];
         var x, y;
@@ -138,7 +141,7 @@
             pos = i*4;
             x = i % frame.width;
             y = Math.round(i / frame.width);
-            if(is_object_color(pos, frame, frameBlended))
+            if(is_object_color(pos))
             {
                 //console.log("object found!");
                 if (!object_shape) {
@@ -146,66 +149,61 @@
                     object_shape = {};
                     object_shape.x = x;
                     object_shape.y = y;
-
-                    if(Math.abs(x - last_x) > tracker_size || Math.abs(y - last_y) > tracker_size){
-                      // console.log(new Date().getTime() - last_time)
-                      if(new Date().getTime() - last_time < 150){
-                        // console.log("distance > tracker_size");
-                        return
-                      }
-                    }
-
                     shapes.push(object_shape);
                     path.push(object_shape);
                     _points.push(new Point(x, y));
                 }
             }
         }
-        if (shapes.length == 1)
+        if (shapes.length>0)
         {
-            last_x = shapes[0].x;
-            last_y = shapes[0].y;
-            last_time = new Date().getTime();
-            // console.log(shapes[0].x, shapes[0].y);
-            var colorTracked = ctx.getImageData(shapes[0].x, shapes[0].y, 1, 1).data;
-            // console.log(colorTracked);
-            // console.log("color: r="+colorTracked[0]+",g="+colorTracked[1]+",b="+colorTracked[2]);
-            var hsv = rgbToHsv(colorTracked);
-            // console.log(colorTracked);
-            setColorToTrack(hsv);
             ctx.beginPath();
-            // ctx.moveTo(path[0].x, path[0].y);
-            for( var s=0; s<path.length; s+=1){
-                // ctx.strokeRect(path[s].x-tracker_size/2,  path[s].y-tracker_size/2, tracker_size, tracker_size);
-                ctx.arc(path[s].x, path[s].y, tracker_size/2, 0 , 2*Math.PI);
-                // ctx.lineTo(shapes[s].x, shapes[s].y);
+            ctx.moveTo(shapes[0].x, shapes[0].y);
+            for( var s=0; s<shapes.length; s+=1){
+                ctx.strokeRect(shapes[s].x-tracker_size/2,  shapes[s].y-tracker_size/2, tracker_size, tracker_size);
+                //ctx.lineTo(shapes[s].x, shapes[s].y);
             }
             ctx.closePath();
             ctx.stroke();
             if (shapes.length==1){
-              onMoveFunc(shapes[0].x, shapes[0].y);
+                onMoveFunc(shapes[0].x, shapes[0].y);
             }
-        }else{
-          path = []
-          if(_points.length > 10){
-            var result = _r.Recognize(_points)
-            console.log(result);
+        }
+        if (_points.length > 10) {
+            filterInvalidPoint(_points);
+            var result = _r.Recognize(_points);
+            if(result.Score > 0.5){
+                console.log(result);
+            }
+            //console.info(JSON.stringify(_points));
+            mqttClient.send(result.Name);
             _points = [];
-          }          
         }
     }
 
-    var path = [];
-    var last_x = 0, last_y = 0, last_time = 0;
+    function filterInvalidPoint(points){
+        for(var i = 0; i < points.length - 1; i++){
+            if (Math.abs(points[i].x - points[i + 1].x) > 50
+                || Math.abs(points[i].y - points[i + 1].y) > 50) {
+                points.splice(i,1);
+            }
+        }
+    }
 
-    function blend(frame) {
+    function processMessage(msg){
+        var response = JSON.parse(msg.payloadString).contentNodes;
+        console.log(response);
+    }
+
+    var path = [];
+
+    function blend() {
         if (!lastImageData) lastImageData = frame;
         var blendedData = ctx.createImageData(video_width, video_height);
         createBlendedMask(blendedData.data, frame.data, lastImageData.data);
         ctxBlended.putImageData(blendedData, 0, 0);
-        var frameBlended = ctxBlended.getImageData(0, 0, video_width, video_height);
+        frameBlended = ctxBlended.getImageData(0, 0, video_width, video_height);
         lastImageData = frame;
-        return frameBlended;
     }
 
     function fastAbs(value) {
@@ -239,14 +237,14 @@
     var defaults = {
         min_speed: 0x45,               // Minimun speed of the object to trigger the onMove function
         tracker_size: 40,              // Size of the tracker
-        color_to_track: '#EFD0CF',     // Caucasian skin color by defect
-        color_tolerance: [0.2, 0.2, 0.2],  // h,s,v vector color tolerance (range 0-1)
+        color_to_track: '#FF0000',     // Caucasian skin color by defect
+        color_tolerance: [0.5, 0.9, 0.9],  // h,s,v vector color tolerance (range 0-1)
         blended_opacity:0,
         tracker_opacity:1,
         zIndex: 2e9,                   // Use a high z-index by default
         video_target_id: 'video2track',// Video css id to track
         interactive: true,             // Allow click over a object to track
-        inverted: false,               // Invert the video (usefull using webcam)
+        inverted: false               // Invert the video (usefull using webcam)
     };
 
     /** The constructor */
@@ -280,9 +278,9 @@
                 video2track.parentNode.insertBefore(vtCanvas, video2track||null);
                 video2track.parentNode.insertBefore(vtCanvasBlended, video2track||null);
                 vtDimensions = {left: video2track.offsetLeft + 'px',
-                                top: video2track.offsetTop + 'px',
-                                width: video_width + 'px',
-                                height: video_height + 'px'};
+                    top: video2track.offsetTop + 'px',
+                    width: video_width + 'px',
+                    height: video_height + 'px'};
                 css(vtCanvas, vtDimensions);
                 css(vtCanvasBlended, vtDimensions);
             }
@@ -292,7 +290,7 @@
             if(o.interactive) {
                 vtCanvas.addEventListener('click', function(e) {
                     ctx.drawImage(video2track, 0, 0, video_width, video_height);
-                    var colorTracked = ctx.getImageData(video_width-e.clientX,e.clientY,1,1).data;
+                    colorTracked = ctx.getImageData(video_width-e.clientX,e.clientY,1,1).data;
                     hsv = rgbToHsv(colorTracked);
                     console.log("color: r="+colorTracked[0]+",g="+colorTracked[1]+",b="+colorTracked[2]);
                     console.log("color: H="+hsv[0]+",S="+hsv[1]+",V="+hsv[2]);
@@ -314,33 +312,35 @@
 
 })(window, document);
 
-document.addEventListener("DOMContentLoaded", function() {
-  var videoObj = {'video': true}
-  var errBack = function (error) {
-      console.log('Video capture error: ', error.code)
-  }
-  if (navigator.webkitGetUserMedia) { // WebKit-prefixed
-      navigator.webkitGetUserMedia(videoObj, callback, errBack)
-  } else if (navigator.mozGetUserMedia) { // Firefox-prefixed
-      navigator.mozGetUserMedia(videoObj, callback, errBack)
-  }
 
-  function callback(stream) {
-      var video = document.getElementById('video_id')
-      video.src = window.URL.createObjectURL(stream)
-      video.play()
-  }
-  var playid;
-  var onMoveFunc = function (x, y) {
-      // console.log('Object detected at x=' + x + ', y=' + y);
-      if(y > 200) return
-      var id = "#b" + Math.floor(x/80);
-      if(id == playid) return
-      playid = id
-      var play = document.querySelector(id);
-      // if(play) play.play()
-  };
-  var videotracker = new VideoTracker({video_target_id: 'video_id', inverted:true});
-  videotracker.setOnMoveFunc(onMoveFunc);
-  videotracker.start();
+document.addEventListener("DOMContentLoaded", function () {
+    var videoObj = {'video': true}
+    var errBack = function (error) {
+        console.log('Video capture error: ', error.code)
+    }
+    if (navigator.webkitGetUserMedia) { // WebKit-prefixed
+        navigator.webkitGetUserMedia(videoObj, callback, errBack)
+    } else if (navigator.mozGetUserMedia) { // Firefox-prefixed
+        navigator.mozGetUserMedia(videoObj, callback, errBack)
+    }
+
+    function callback(stream) {
+        var video = document.getElementById('video_id')
+        video.src = window.URL.createObjectURL(stream)
+        video.play()
+    }
+
+    var playid;
+    var onMoveFunc = function (x, y) {
+        //console.log('Object detected at x=' + x + ', y=' + y);
+        if (y > 200) return
+        var id = "#b" + Math.floor(x / 80);
+        if (id == playid) return
+        playid = id
+        var play = document.querySelector(id);
+        // if(play) play.play()
+    };
+    var videotracker = new VideoTracker({video_target_id: 'video_id', inverted: true});
+    videotracker.setOnMoveFunc(onMoveFunc);
+    videotracker.start();
 });
