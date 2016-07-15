@@ -53,14 +53,14 @@ var mqttClient = (function(){
             mqtt.onMessageArrived = cb;
 			if(mqtt.isConnected()){
                 mqtt.unsubscribe(_filter);
-                _filter = '/cvc/status/' + vin;
+                _filter = '/car';
                 mqtt.subscribe(_filter,subscribeOption);                
             }else{
                 mqtt.connect({
                     onSuccess:function(){
                         console.log("mqttClient connected.");
                         lighton(light);
-                        _filter = '/cvc/status/' + vin;
+                        _filter = '/car';
                         mqtt.subscribe(_filter,subscribeOption);
                     },
                     onFailure: function(error){
@@ -86,10 +86,10 @@ var mqttClient = (function(){
             }
         },
         sendCar:function(msg){
-            this._send('/car'+ _vin, msg);
+            this._send('/car', msg);
         },
         sendPPT:function(msg){
-            this._send('/ppt'+ _vin, msg);
+            this._send('/ppt', msg);
         },
         pong:function(){
             this._send('/cvc/status/'+ _vin, {pong:new Date().getTime()});

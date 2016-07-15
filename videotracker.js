@@ -128,12 +128,6 @@
     var _points = new Array();
     var _r;
 
-    var pointTime = new Date().getTime();
-
-
-    //connect with mqtt
-    mqttClient.subscribe('', processMessage);
-
 
     function computeFrame() {
         var frame = ctx.getImageData(0, 0, video_width, video_height);
@@ -230,11 +224,11 @@
                         var circle_point = new Point(320,320);
                         var percentage = 0;
                         for(var i = 0; i < _points.length; i++){
-                            if(pointDistance(_points[i],circle_point) < 80){
+                            if(pointDistance(_points[i],circle_point) < 90){
                                 percentage ++;
                             }
                         }
-                        if(percentage / _points.length > 0.4 && carStatus == "stop"){
+                        if(percentage / _points.length > 0.3 && carStatus == "stop"){
                             console.log("car start...");
                             mqttClient.sendCar("up");
                             //hidden go button
@@ -272,11 +266,6 @@
                 points.splice(i, 1);
             }
         }
-    }
-
-    function processMessage(msg) {
-        var response = JSON.parse(msg.payloadString).contentNodes;
-        console.log(response);
     }
 
     var path = [];
@@ -448,4 +437,27 @@ document.addEventListener("DOMContentLoaded", function () {
     videotracker.setOnMoveFunc(onMoveFunc);
     videotracker.start();
 
+});
+
+$(document).ready(function() {
+    $("input").click(function(){
+        console.log($(this).val());
+        if($(this).val() == "ppt"){
+            $("#go_button").hide();
+        }else if($(this).val() == "car"){
+            if(carStatus == "stop"){
+                $("#go_button").show();
+            }
+        }
+    });
+    function processMessage(msg) {
+        var response = JSON.parse(msg.payloadString);
+        console.log(response);
+        if(response == "stop"){
+            carStatus == "stop";
+            $("#go_button").show();
+        }
+    }
+    //connect with mqtt
+    mqttClient.subscribe('/car', processMessage);
 });
