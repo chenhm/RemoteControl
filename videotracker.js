@@ -225,8 +225,28 @@
                         return;
                     }
                     if ($("input:checked").val() == "car") {
-                        console.info("car controller: " + result.Name);
-                        mqttClient.sendCar(result.Name);
+                        console.info("car controller");
+                        //judge the point in go button or not
+                        var circle_point = new Point(320,320);
+                        var percentage = 0;
+                        for(var i = 0; i < _points.length; i++){
+                            if(pointDistance(_points[i],circle_point) < 80){
+                                percentage ++;
+                            }
+                        }
+                        if(percentage / _points.length > 0.4 && carStatus == "stop"){
+                            console.log("car start...");
+                            mqttClient.sendCar("up");
+                            //hidden go button
+                            $("#go_button").hide();
+                            setTimeout(function(){
+                                carStatus = "start";
+                            }, 2000)
+                        }
+                        if (carStatus == "start") {
+                            mqttClient.sendCar(result.Name);
+                        }
+                        //
                     }else{
                         if (!sendFlag) {
                              if($("input:checked").val() == "ppt") {
@@ -278,6 +298,11 @@
 
     function threshold(value) {
         return (value > min_speed) ? 0xFF : 0;
+    }
+
+    function pointDistance(point1, point2){
+        var distance = Math.sqrt(Math.pow(Math.abs(point1.X - point2.X),2) + Math.pow(Math.abs(point1.Y - point2.Y),2));
+        return distance;
     }
 
     function createBlendedMask(target, data1, data2) {
@@ -370,6 +395,7 @@
                     hsv = rgbToHsv(colorTracked);
                     console.log("color: r=" + colorTracked[0] + ",g=" + colorTracked[1] + ",b=" + colorTracked[2]);
                     console.log("color: H=" + hsv[0] + ",S=" + hsv[1] + ",V=" + hsv[2]);
+                    console.log("x: " + e.clientX + ", y: " + e.clientY);
                     setColorToTrack(hsv);
                 }, true);
             }
@@ -389,6 +415,7 @@
 })(window, document);
 
 var sendFlag = false;
+var carStatus = "stop";//false mean stop.
 
 document.addEventListener("DOMContentLoaded", function () {
     var videoObj = {'video': true}
