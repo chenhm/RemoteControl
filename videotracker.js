@@ -203,7 +203,7 @@
                 clearFlag = false;
             }
             if (clearFlag) {
-                console.log("clear _points array list");
+                //console.log("clear _points array list");
                 _points = [];
                 path = [];
             } else {
@@ -238,7 +238,14 @@
                             }, 2000)
                         }
                         if (carStatus == "start") {
-                            mqttClient.sendCar(result.Name);
+                            if (!sendFlag) {
+                                mqttClient.sendCar(result.Name);
+                                sendFlag = true;
+                                setTimeout(function () {
+                                    sendFlag = false;
+                                    console.log("reset send flag.");
+                                }, 1500);
+                            }
                         }
                         //
                     }else{
@@ -451,10 +458,10 @@ $(document).ready(function() {
         }
     });
     function processMessage(msg) {
-        var response = JSON.parse(msg.payloadString);
-        console.log(response);
-        if(response == "stop"){
-            carStatus == "stop";
+        var response = msg.payloadString
+        console.log("---->" + response);
+        if(response == "down"){
+            carStatus = "stop";
             $("#go_button").show();
         }
     }
