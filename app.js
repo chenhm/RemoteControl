@@ -34,7 +34,7 @@ var mqttClient = (function(){
     var light = $('<div style="width:15px;height:15px;position:absolute;top:5px;right:5px;">');
     lightoff(light);
     $('body').append(light);
-    
+
     var subscribeOption = {
         onSuccess:function(){
             console.log("mqttClient subscribe " + _filter + " success." );
@@ -44,7 +44,7 @@ var mqttClient = (function(){
         },
         qos:1
     };
-    
+
     var _filter, _callback, _vin;
 	var client = {
 		subscribe: function(vin,cb){
@@ -53,20 +53,20 @@ var mqttClient = (function(){
             mqtt.onMessageArrived = cb;
 			if(mqtt.isConnected()){
                 mqtt.unsubscribe(_filter);
-                _filter = '/cvc/status/' + vin;
-                mqtt.subscribe(_filter,subscribeOption);                
+                _filter = '' + vin;
+                mqtt.subscribe(_filter,subscribeOption);
             }else{
                 mqtt.connect({
                     onSuccess:function(){
                         console.log("mqttClient connected.");
                         lighton(light);
-                        _filter = '/cvc/status/' + vin;
+                        _filter = '' + vin;
                         mqtt.subscribe(_filter,subscribeOption);
                     },
                     onFailure: function(error){
                         console.log("mqttClient connect fail. "+ error.errorMessage);
                         setTimeout(function(){
-                            client.subscribe(_vin,_callback);    
+                            client.subscribe(_vin,_callback);
                         },10000);
                     },
                     keepAliveInterval: 20
@@ -86,10 +86,10 @@ var mqttClient = (function(){
             }
         },
         sendCar:function(msg){
-            this._send('/car'+ _vin, msg);
+            this._send('/car', msg);
         },
         sendPPT:function(msg){
-            this._send('/ppt'+ _vin, msg);
+            this._send('/ppt', msg);
         },
         pong:function(){
             this._send('/cvc/status/'+ _vin, {pong:new Date().getTime()});
@@ -112,8 +112,3 @@ function execStep(funcList,timeout,times){
     step();
     return function(){times=0};
 }
-
-
-
-
-

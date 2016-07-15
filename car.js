@@ -52,10 +52,49 @@
 
     // Video tracking functions
     // -------------------------
+    var pikachu_show = false;
+    var pikachu_show_time;
+    var pikachu_size = 1;
+    var car_msg = '';
+
+    var image = new Image();
+    image.onload = function() {
+    };
+    image.src = "sprite_01.png";
+
     function createFrame() {
+        if(pikachu_show && car_msg == 'up' && pikachu_size > 120){
+          document.querySelector('#gameover').style.zIndex = 2e9 +1;
+          document.querySelector('#gameover').style.display = 'block';
+          mqttClient.sendCar('down');
+          return;
+        }
         ctx.drawImage(video2track, 0, 0, video_width, video_height);
+        if(pikachu_show){
+          ctx.drawImage(image, 240 * Math.floor((pikachu_size % 8)/4), 0, 240, 200, 240 - pikachu_size, 100, 240 + pikachu_size * 2, 200 + pikachu_size * 2);
+          // console.log("show");
+          // ctx.strokeRect( video_width/2 - pikachu_size * 2 , video_height/2 - pikachu_size * 2 , pikachu_size * 4, pikachu_size * 4);
+          pikachu_size++;
+        }
         setTimeout(createFrame, 1000/30);
     };
+
+    function showPikachu(){
+      pikachu_show = true;
+      pikachu_show_time = new Date().getTime()
+    }
+    // showPikachu()
+    function processMessage(msg) {
+        console.log(msg.payloadString);
+        car_msg = msg.payloadString
+        if(msg.payloadString == 'up'){
+          setTimeout(showPikachu, 2000)
+        }
+        if(msg.payloadString == 'right' || msg.payloadString == 'left'){
+
+        }
+    }
+    mqttClient.subscribe('/car', processMessage);
 
     var video2track;
     var video_width, video_height;
@@ -113,6 +152,7 @@
                     height: video_height + 'px'
                 };
                 css(vtCanvas, vtDimensions);
+                css(document.querySelector('#gameover'), vtDimensions);
             }
 
             ctx = vtCanvas.getContext('2d');
@@ -131,12 +171,7 @@ var sendFlag = false;
 
 document.addEventListener("DOMContentLoaded", function () {
     //connect with mqtt
-    function processMessage(msg) {
-        var response = JSON.parse(msg.payloadString).contentNodes;
-        console.log(response);
-    }
 
-    mqttClient.subscribe('/car', processMessage);
 
     var videoObj = {'video': true}
     var errBack = function (error) {
@@ -153,4 +188,8 @@ document.addEventListener("DOMContentLoaded", function () {
         video.src = window.URL.createObjectURL(stream)
         video.play()
     }
+
+    var videotracker = new VideoTracker({video_target_id: 'video_car', inverted: false});
+    videotracker.start();
+
 });
