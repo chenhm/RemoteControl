@@ -80,12 +80,16 @@ var mqttClient = (function(){
                 message.destinationName = topic;
                 message.qos = 1;
                 mqtt.send(message);
+                console.log("send message: " + msg + ", successfully!");
             }else{
                 console.log("Can't send message, mqtt client is disconnected.");
             }
         },
-        send:function(msg){
+        sendCar:function(msg){
             this._send('/car'+ _vin, msg);
+        },
+        sendPPT:function(msg){
+            this._send('/ppt'+ _vin, msg);
         },
         pong:function(){
             this._send('/cvc/status/'+ _vin, {pong:new Date().getTime()});
