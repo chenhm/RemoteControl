@@ -56,6 +56,7 @@
     var pikachu_show_time;
     var pikachu_size = 1;
     var car_msg = '';
+    var pikachu_move = 1;
 
     var image = new Image();
     image.onload = function() {
@@ -69,12 +70,30 @@
           mqttClient.sendCar('down');
           return;
         }
-        ctx.drawImage(video2track, 0, 0, video_width, video_height);
-        if(pikachu_show){
-          ctx.drawImage(image, 240 * Math.floor((pikachu_size % 8)/4), 0, 240, 200, 240 - pikachu_size, 100, 240 + pikachu_size * 2, 200 + pikachu_size * 2);
+        if(pikachu_show && car_msg == 'right'){
+          ctx.drawImage(video2track, 0, 0, video_width, video_height);
+          ctx.drawImage(image, 240 * Math.floor(((pikachu_size + pikachu_move) % 8)/4), 0, 240, 200, 240 - pikachu_size - pikachu_move*2, 200-pikachu_size, 240 + pikachu_size * 2, 200 + pikachu_size * 2);
+          pikachu_move++;
+          if(pikachu_move > 120){
+            mqttClient.sendCar('down');
+            return
+          }
+        }else if(pikachu_show && car_msg == 'left'){
+          ctx.drawImage(video2track, 0, 0, video_width, video_height);
+          ctx.drawImage(image, 240 * Math.floor(((pikachu_size + pikachu_move) % 8)/4), 0, 240, 200, 240 - pikachu_size + pikachu_move*2, 200-pikachu_size, 240 + pikachu_size * 2, 200 + pikachu_size * 2);
+          pikachu_move++;
+          if(pikachu_move > 120){
+            mqttClient.sendCar('down');
+            return
+          }
+        }else if(pikachu_show){
+          ctx.drawImage(video2track, 0, 0, video_width, video_height);
+          ctx.drawImage(image, 240 * Math.floor((pikachu_size % 8)/4), 0, 240, 200, 240 - pikachu_size, 200-pikachu_size, 240 + pikachu_size * 2, 200 + pikachu_size * 2);
           // console.log("show");
           // ctx.strokeRect( video_width/2 - pikachu_size * 2 , video_height/2 - pikachu_size * 2 , pikachu_size * 4, pikachu_size * 4);
           pikachu_size++;
+        }else{
+          ctx.drawImage(video2track, 0, 0, video_width, video_height);
         }
         setTimeout(createFrame, 1000/30);
     };

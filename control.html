@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <style>
+  div{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body{
+    transform: scale(2);
+    margin-top: 50px;
+  }
+  </style>
+</head>
+<body>
+<div><input type="button" value="↖"/><input type="button" value="↑"/><input type="button" value="↗"/></div>
+<div><input type="button" value="○"/></div>
+<div><input type="button" value="↙"/><input type="button" value="↓"/><input type="button" value="↘"/></div>
+<script>
+var ws = new WebSocket('ws://192.168.42.1:1880/ws/car');
+document.querySelectorAll('input').forEach(e => {
+  e.addEventListener('click', evt => {
+    console.log(evt.target.value);
+    var val = evt.target.value
+    ws.send(val)
+  })
+})
+</script>
+</body>
+</html>
